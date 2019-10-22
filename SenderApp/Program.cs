@@ -3,6 +3,11 @@ using RabbitMQ.Client;
 using System.Text;
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using Common;
+using System.Net;
+using System.Net.Sockets;
+using System.Threading;
+using System.Configuration;
 
 namespace SenderApp
 {
@@ -10,40 +15,113 @@ namespace SenderApp
     {
         private static Random rand = new Random();
 
+        private static SocketClient client;
+
+        private static int ClientId;
+
         public static void Main()
         {
-            while (true)
+            InitSocket();
+
+            KeyExchange();
+
+            bool exit = false;
+            while (!exit)
             {
-                var factory = new ConnectionFactory() { HostName = "localhost" };
-                using (var connection = factory.CreateConnection())
-                using (var channel = connection.CreateModel())
+                var key = Console.ReadKey().Key;
+
+                switch (key)
                 {
-                    channel.QueueDeclare(queue: "hello",
-                                         durable: false,
-                                         exclusive: false,
-                                         autoDelete: false,
-                                         arguments: null);
+                    case ConsoleKey.Enter:
+                    case ConsoleKey.Spacebar:
+                        var obj = GenerateObject();
+                        var list = new List<Ticket>() { obj };
 
-                    var obj = GenerateObject();
-                    var list = new List<Ticket>() { obj };
+                        string message = JsonConvert.SerializeObject(list);
 
-                    string message = JsonConvert.SerializeObject(list);
-                    var body = Encoding.UTF8.GetBytes(message);
+                        var encryptMsg = CryptoService.EncryptMessage(message);
 
-                    channel.BasicPublish(exchange: "",
-                                         routingKey: "hello",
-                                         basicProperties: null,
-                                         body: body);
-                    Console.WriteLine(" [x] Sent {0}", message);
+                        var packet = new TransferPacket
+                        {
+                            type = PacketType.ImportData,
+                            clientId = ClientId,
+                            data = encryptMsg
+                        };
+
+                        if (key == ConsoleKey.Enter) SendToMessageQueue(packet);
+                        else client.Send(packet);
+
+                        Console.WriteLine(" [x] {0} \n [x] Sent {1}", DateTime.Now.ToLongTimeString(), message);
+                        break;
+                    case ConsoleKey.Escape:
+                        exit = true;
+                        break;
                 }
+            }
+        }
+        private static void InitSocket()
+        {
+            client = new SocketClient("127.0.0.1", 9501);
+        }
 
-                var cmd = Console.ReadLine();
+        private static void KeyExchange()
+        {
+            try
+            {
+                // запрос на получение открытого ключа шифрования
+                var request = new TransferPacket
+                {
+                    type = PacketType.PublicKeyRequest,
+                    data = string.Empty
+                };
 
-                if (cmd.Contains("exit"))
-                    break;
+                client.Send(request);
+                var response = client.Receive();
+
+                ClientId = response.clientId;
+                CryptoService.SetPublicKey(response.data);
+
+                // отправляем ключ шифрования данных
+                request = new TransferPacket
+                {
+                    type = PacketType.TransferKey,
+                    clientId = ClientId,
+                    data = CryptoService.GetEncryptedSymmetricKey()
+                };
+                client.Send(request);
+
+                Console.WriteLine("RSA key: {0}\nDES key: {1}\n", response.data, CryptoService.GetSymmetricKey());
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
             }
         }
 
+        private static void SendToMessageQueue(TransferPacket packet)
+        {
+            var factory = new ConnectionFactory() { HostName = ConfigurationManager.AppSettings.Get("RabbitMQAddress") };
+            using (var connection = factory.CreateConnection())
+            using (var channel = connection.CreateModel())
+            {
+                channel.QueueDeclare(queue: "hello",
+                                        durable: false,
+                                        exclusive: false,
+                                        autoDelete: false,
+                                        arguments: null);
+
+                var serializedPacket = JsonConvert.SerializeObject(packet);
+
+                var body = Encoding.ASCII.GetBytes(serializedPacket);
+
+                channel.BasicPublish(exchange: "",
+                                        routingKey: "hello",
+                                        basicProperties: null,
+                                        body: body);
+            }
+        }
+
+        #region Generate Object
         private static Ticket GenerateObject()
         {
             return new Ticket
@@ -119,5 +197,6 @@ namespace SenderApp
         {
             return new TimeSpan((long)(rand.NextDouble() * 1000000));
         }
+        #endregion
     }
 }
