@@ -12,6 +12,8 @@ namespace DataImporter.Objects
 
         public bool Food { get; set; }
 
+        public double Cost { get; set; }
+
         public string DepartureFrom { get; set; }
 
         public string ArrivalTo { get; set; }
@@ -27,6 +29,7 @@ namespace DataImporter.Objects
                 Class = ticket.Class,
                 Seat = ticket.Seat,
                 Food = ticket.Food,
+                Cost = ticket.Price,
                 DepartureFrom = ticket.DepartureFromPK,
                 ArrivalTo = ticket.ArrivalToPK,
                 Trip = ticket.TripPK,
