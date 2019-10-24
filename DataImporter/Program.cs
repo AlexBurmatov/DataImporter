@@ -31,7 +31,9 @@ namespace DataImporter
 
         private static void InitSocket()
         {
-            server = new SocketServer("127.0.0.1", 9501);
+            var port = ConfigurationManager.AppSettings.Get("PortForSocket");
+
+            server = new SocketServer("servicehost", int.Parse(port));
 
             server.MessageReceived += Server_MessageReceived;
         }
@@ -80,7 +82,7 @@ namespace DataImporter
         private static void Consumer_Received(object sender, BasicDeliverEventArgs e)
         {
             var body = e.Body;
-            var message = Encoding.ASCII.GetString(body);
+            var message = Encoding.UTF8.GetString(body);
 
             var packet = JsonConvert.DeserializeObject<TransferPacket>(message);
 

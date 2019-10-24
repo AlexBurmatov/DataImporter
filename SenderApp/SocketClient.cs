@@ -14,13 +14,9 @@ namespace SenderApp
     {
         private Socket socket;
 
-        /*public delegate void MessageHandler(TransferPacket packet);
-
-        public event MessageHandler MessageReceived;*/
-
         public SocketClient(string address, int port)
         {
-            IPEndPoint ipPoint = new IPEndPoint(IPAddress.Parse(address), port);
+            IPEndPoint ipPoint = new IPEndPoint(Dns.GetHostEntry(address).AddressList[0], port);
 
             socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
@@ -42,8 +38,6 @@ namespace SenderApp
                         Thread.Sleep(1000);
                     }
                 }
-
-                //new Task(() => SocketHandler()).Start();
             }
             catch (Exception ex)
             {
@@ -55,7 +49,7 @@ namespace SenderApp
         {
             var serializedResponse = JsonConvert.SerializeObject(packet);
 
-            var bytes = Encoding.ASCII.GetBytes(serializedResponse);
+            var bytes = Encoding.UTF8.GetBytes(serializedResponse);
 
             socket.Send(bytes);
         }
@@ -69,7 +63,7 @@ namespace SenderApp
             do
             {
                 bytes = socket.Receive(data);
-                builder.Append(Encoding.ASCII.GetString(data, 0, bytes));
+                builder.Append(Encoding.UTF8.GetString(data, 0, bytes));
             }
             while (socket.Available > 0);
 
@@ -79,36 +73,5 @@ namespace SenderApp
 
             return packet;
         }
-
-        /*private void SocketHandler()
-        {
-            try
-            {
-                while (true)
-                {
-                    StringBuilder builder = new StringBuilder();
-                    int bytes = 0;
-                    byte[] data = new byte[256];
-
-                    do
-                    {
-                        bytes = socket.Receive(data);
-                        builder.Append(Encoding.Unicode.GetString(data, 0, bytes));
-                    }
-                    while (socket.Available > 0);
-
-                    string message = builder.ToString();
-
-                    var packet = JsonConvert.DeserializeObject<TransferPacket>(message);
-
-                    MessageReceived.Invoke(packet);
-                }
-            }
-            catch
-            {
-                socket.Shutdown(SocketShutdown.Both);
-                socket.Close();
-            }
-        }*/
     }
 }

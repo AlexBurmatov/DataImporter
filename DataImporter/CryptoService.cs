@@ -59,7 +59,7 @@ namespace DataImporter
 
                 csDecrypt.Read(fromEncrypt, 0, fromEncrypt.Length);
 
-                return new ASCIIEncoding().GetString(fromEncrypt);
+                return new UTF8Encoding().GetString(fromEncrypt);
             }
             catch
             {

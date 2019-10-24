@@ -27,7 +27,7 @@ namespace DataImporter
 
         public SocketServer(string address, int port)
         {
-            IPEndPoint ipPoint = new IPEndPoint(IPAddress.Parse(address), port);
+            IPEndPoint ipPoint = new IPEndPoint(Dns.GetHostEntry(address).AddressList[0], port);
 
             Socket listenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
@@ -50,7 +50,7 @@ namespace DataImporter
         {
             var serializedResponse = JsonConvert.SerializeObject(packet);
 
-            var bytes = Encoding.ASCII.GetBytes(serializedResponse);
+            var bytes = Encoding.UTF8.GetBytes(serializedResponse);
 
             socket.Send(bytes);
         }
@@ -88,7 +88,7 @@ namespace DataImporter
                     do
                     {
                         bytes = socket.Receive(data);
-                        builder.Append(Encoding.ASCII.GetString(data, 0, bytes));
+                        builder.Append(Encoding.UTF8.GetString(data, 0, bytes));
                     }
                     while (socket.Available > 0);
 

@@ -48,7 +48,7 @@ namespace SenderApp
                 CryptoStreamMode.Write);
 
             // Convert the passed string to a byte array.
-            byte[] toEncrypt = new ASCIIEncoding().GetBytes(text);
+            byte[] toEncrypt = new UTF8Encoding().GetBytes(text);
 
             // Write the byte array to the crypto stream and flush it.
             cStream.Write(toEncrypt, 0, toEncrypt.Length);

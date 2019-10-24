@@ -61,7 +61,9 @@ namespace SenderApp
         }
         private static void InitSocket()
         {
-            client = new SocketClient("127.0.0.1", 9501);
+            var port = ConfigurationManager.AppSettings.Get("PortForSocket");
+
+            client = new SocketClient("servicehost", int.Parse(port));
         }
 
         private static void KeyExchange()
@@ -112,7 +114,7 @@ namespace SenderApp
 
                 var serializedPacket = JsonConvert.SerializeObject(packet);
 
-                var body = Encoding.ASCII.GetBytes(serializedPacket);
+                var body = Encoding.UTF8.GetBytes(serializedPacket);
 
                 channel.BasicPublish(exchange: "",
                                         routingKey: "hello",
